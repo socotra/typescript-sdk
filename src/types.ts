@@ -916,7 +916,7 @@ export const CallToolResultSchema = ResultSchema.extend({
    * If the Tool does not define an outputSchema, this field MUST be present in the result.
    * For backwards compatibility, this field is always present, but it may be empty.
    */
-  content: z.array(ContentBlockSchema).prefault([]),
+  content: z.array(ContentBlockSchema).default([]),
 
   /**
    * An object containing structured tool output.

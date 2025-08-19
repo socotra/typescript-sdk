@@ -55,7 +55,7 @@ describe('Streamable HTTP Transport Session Management', () => {
       'greet',
       'A simple greeting tool',
       {
-        name: z.string().describe('Name to greet').prefault('World'),
+        name: z.string().describe('Name to greet').default('World'),
       },
       async ({ name }) => {
         return {
