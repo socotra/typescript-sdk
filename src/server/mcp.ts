@@ -1,7 +1,4 @@
 import { Server, ServerOptions } from "./index.js";
-// Lightweight replacement for zod-to-json-schema tailored for this SDK's needs.
-// Produces a minimal JSON Schema subset: { type: "object", properties, required? }
-// Supports primitives, enums, and nested objects. Sufficient for our tool list output tests.
 import {
   z,
   ZodRawShape,
