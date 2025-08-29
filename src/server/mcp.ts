@@ -37,6 +37,7 @@ import {
   ServerRequest,
   ServerNotification,
   ToolAnnotations,
+  LoggingMessageNotification,
 } from "../types.js";
 import { CompletableDef, McpZodTypeKind } from "./completable.js";
 import { UriTemplate, Variables } from "../shared/uriTemplate.js";
@@ -1100,6 +1101,16 @@ export class McpServer {
     return this.server.transport !== undefined;
   }
 
+  /**
+   * Sends a logging message to the client, if connected.
+   * Note: You only need to send the parameters object, not the entire JSON RPC message
+   * @see LoggingMessageNotification
+   * @param params
+   * @param sessionId optional for stateless and backward compatibility
+   */
+  async sendLoggingMessage(params: LoggingMessageNotification["params"], sessionId?: string) {
+    return this.server.sendLoggingMessage(params, sessionId);
+  }
   /**
    * Sends a resource list changed event to the client, if connected.
    */
