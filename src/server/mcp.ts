@@ -117,6 +117,7 @@ export class McpServer {
                 ? z.toJSONSchema(tool.inputSchema) as Tool["inputSchema"]
                 : EMPTY_OBJECT_JSON_SCHEMA,
               annotations: tool.annotations,
+              _meta: tool._meta,
             };
 
             if (tool.outputSchema) {
@@ -802,7 +803,8 @@ export class McpServer {
     inputSchema: ZodRawShape | undefined,
     outputSchema: ZodRawShape | undefined,
     annotations: ToolAnnotations | undefined,
-    callback: ToolCallback<ZodRawShape | undefined>,
+    _meta: Record<string, unknown> | undefined,
+    callback: ToolCallback<ZodRawShape | undefined>
   ): RegisteredTool {
     const registeredTool: RegisteredTool = {
       title,
@@ -812,6 +814,7 @@ export class McpServer {
       outputSchema:
         outputSchema === undefined ? undefined : z.object(outputSchema),
       annotations,
+      _meta,
       callback,
       enabled: true,
       disable: () => registeredTool.update({ enabled: false }),
@@ -823,19 +826,14 @@ export class McpServer {
           if (updates.name)
             this._registeredTools[updates.name] = registeredTool;
         }
-        if (typeof updates.title !== "undefined")
-          registeredTool.title = updates.title;
-        if (typeof updates.description !== "undefined")
-          registeredTool.description = updates.description;
-        if (typeof updates.paramsSchema !== "undefined")
-          registeredTool.inputSchema = z.object(updates.paramsSchema);
-        if (typeof updates.callback !== "undefined")
-          registeredTool.callback = updates.callback;
-        if (typeof updates.annotations !== "undefined")
-          registeredTool.annotations = updates.annotations;
-        if (typeof updates.enabled !== "undefined")
-          registeredTool.enabled = updates.enabled;
-        this.sendToolListChanged();
+        if (typeof updates.title !== "undefined") registeredTool.title = updates.title
+        if (typeof updates.description !== "undefined") registeredTool.description = updates.description
+        if (typeof updates.paramsSchema !== "undefined") registeredTool.inputSchema = z.object(updates.paramsSchema)
+        if (typeof updates.callback !== "undefined") registeredTool.callback = updates.callback
+        if (typeof updates.annotations !== "undefined") registeredTool.annotations = updates.annotations
+        if (typeof updates._meta !== "undefined") registeredTool._meta = updates._meta
+        if (typeof updates.enabled !== "undefined") registeredTool.enabled = updates.enabled
+        this.sendToolListChanged()
       },
     };
     this._registeredTools[name] = registeredTool;
@@ -955,15 +953,7 @@ export class McpServer {
     }
     const callback = rest[0] as ToolCallback<ZodRawShape | undefined>;
 
-    return this._createRegisteredTool(
-      name,
-      undefined,
-      description,
-      inputSchema,
-      outputSchema,
-      annotations,
-      callback,
-    );
+    return this._createRegisteredTool(name, undefined, description, inputSchema, outputSchema, annotations, undefined, callback)
   }
 
   /**
@@ -977,6 +967,7 @@ export class McpServer {
       inputSchema?: InputArgs;
       outputSchema?: OutputArgs;
       annotations?: ToolAnnotations;
+      _meta?: Record<string, unknown>;
     },
     cb: ToolCallback<InputArgs>,
   ): RegisteredTool {
@@ -984,8 +975,7 @@ export class McpServer {
       throw new Error(`Tool ${name} is already registered`);
     }
 
-    const { title, description, inputSchema, outputSchema, annotations } =
-      config;
+    const { title, description, inputSchema, outputSchema, annotations, _meta } = config;
 
     return this._createRegisteredTool(
       name,
@@ -994,7 +984,8 @@ export class McpServer {
       inputSchema,
       outputSchema,
       annotations,
-      cb as ToolCallback<ZodRawShape | undefined>,
+      _meta,
+      cb as ToolCallback<ZodRawShape | undefined>
     );
   }
 
@@ -1228,24 +1219,24 @@ export type RegisteredTool = {
   inputSchema?: ZodObject<ZodRawShape>;
   outputSchema?: ZodObject<ZodRawShape>;
   annotations?: ToolAnnotations;
+  _meta?: Record<string, unknown>;
   callback: ToolCallback<undefined | ZodRawShape>;
   enabled: boolean;
   enable(): void;
   disable(): void;
-  update<
-    InputArgs extends ZodRawShape,
-    OutputArgs extends ZodRawShape,
-  >(updates: {
-    name?: string | null;
-    title?: string;
-    description?: string;
-    paramsSchema?: InputArgs;
-    outputSchema?: OutputArgs;
-    annotations?: ToolAnnotations;
-    callback?: ToolCallback<InputArgs>;
-    enabled?: boolean;
-  }): void;
-  remove(): void;
+  update<InputArgs extends ZodRawShape, OutputArgs extends ZodRawShape>(
+    updates: {
+      name?: string | null,
+      title?: string,
+      description?: string,
+      paramsSchema?: InputArgs,
+      outputSchema?: OutputArgs,
+      annotations?: ToolAnnotations,
+      _meta?: Record<string, unknown>,
+      callback?: ToolCallback<InputArgs>,
+      enabled?: boolean
+    }): void
+  remove(): void
 };
 
 const EMPTY_OBJECT_JSON_SCHEMA = {
