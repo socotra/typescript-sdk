@@ -7,6 +7,8 @@ import {
   ZodType,
   ZodOptional,
 } from "zod/v4";
+import { z as z3 } from "zod/v3";
+import type { ZodRawShape as Z3ZodRawShape } from "zod/v3";
 import {
   Implementation,
   Tool,
@@ -114,16 +116,26 @@ export class McpServer {
               title: tool.title,
               description: tool.description,
               inputSchema: tool.inputSchema
-                ? z.toJSONSchema(tool.inputSchema) as Tool["inputSchema"]
+                ? (() => {
+                    try {
+                      return z.toJSONSchema(tool.inputSchema) as Tool["inputSchema"];
+                    } catch {
+                      return EMPTY_OBJECT_JSON_SCHEMA;
+                    }
+                  })()
                 : EMPTY_OBJECT_JSON_SCHEMA,
               annotations: tool.annotations,
               _meta: tool._meta,
             };
 
             if (tool.outputSchema) {
-              toolDefinition.outputSchema = z.toJSONSchema(
-                tool.outputSchema,
-              ) as Tool["outputSchema"];
+              try {
+                toolDefinition.outputSchema = z.toJSONSchema(
+                  tool.outputSchema,
+                ) as Tool["outputSchema"];
+              } catch {
+                toolDefinition.outputSchema = EMPTY_OBJECT_JSON_SCHEMA as unknown as Tool["outputSchema"];
+              }
             }
 
             return toolDefinition;
@@ -221,6 +233,25 @@ export class McpServer {
     this._toolHandlersInitialized = true;
   }
 
+  private _createCompatibleObject(
+    shape: ZodRawShape | Record<string, unknown>,
+  ): ZodObject<ZodRawShape> | undefined {
+    try {
+      const objV4 = z.object(shape as ZodRawShape);
+      // Smoke test to ensure nested shapes are compatible
+      void objV4.safeParse({});
+      return objV4;
+    } catch {
+      try {
+        const objV3 = z3.object(shape as unknown as Record<string, z3.ZodTypeAny>);
+        void objV3.safeParse({});
+        return objV3 as unknown as ZodObject<ZodRawShape>;
+      } catch {
+        return undefined;
+      }
+    }
+  }
+
   private _completionHandlerInitialized = false;
 
   private setCompletionRequestHandler() {
@@ -238,7 +269,7 @@ export class McpServer {
 
     this.server.setRequestHandler(
       CompleteRequestSchema,
-      async (request): Promise<CompleteResult> => {
+      async (request: CompleteRequest): Promise<CompleteResult> => {
         switch (request.params.ref.type) {
           case "ref/prompt":
             return this.handlePromptCompletion(request, request.params.ref);
@@ -767,7 +798,7 @@ export class McpServer {
     const registeredPrompt: RegisteredPrompt = {
       title,
       description,
-      argsSchema: argsSchema === undefined ? undefined : z.object(argsSchema),
+      argsSchema: argsSchema === undefined ? undefined : (this._createCompatibleObject(argsSchema as unknown as ZodRawShape) as unknown as ZodObject<PromptArgsRawShape>),
       callback,
       enabled: true,
       disable: () => registeredPrompt.update({ enabled: false }),
@@ -784,7 +815,7 @@ export class McpServer {
         if (typeof updates.description !== "undefined")
           registeredPrompt.description = updates.description;
         if (typeof updates.argsSchema !== "undefined")
-          registeredPrompt.argsSchema = z.object(updates.argsSchema);
+          registeredPrompt.argsSchema = this._createCompatibleObject(updates.argsSchema as unknown as ZodRawShape) as unknown as ZodObject<PromptArgsRawShape>;
         if (typeof updates.callback !== "undefined")
           registeredPrompt.callback = updates.callback;
         if (typeof updates.enabled !== "undefined")
@@ -810,9 +841,9 @@ export class McpServer {
       title,
       description,
       inputSchema:
-        inputSchema === undefined ? undefined : z.object(inputSchema),
+        inputSchema === undefined ? undefined : this._createCompatibleObject(inputSchema),
       outputSchema:
-        outputSchema === undefined ? undefined : z.object(outputSchema),
+        outputSchema === undefined ? undefined : this._createCompatibleObject(outputSchema),
       annotations,
       _meta,
       callback,
@@ -828,7 +859,7 @@ export class McpServer {
         }
         if (typeof updates.title !== "undefined") registeredTool.title = updates.title
         if (typeof updates.description !== "undefined") registeredTool.description = updates.description
-        if (typeof updates.paramsSchema !== "undefined") registeredTool.inputSchema = z.object(updates.paramsSchema)
+        if (typeof updates.paramsSchema !== "undefined") registeredTool.inputSchema = this._createCompatibleObject(updates.paramsSchema)
         if (typeof updates.callback !== "undefined") registeredTool.callback = updates.callback
         if (typeof updates.annotations !== "undefined") registeredTool.annotations = updates.annotations
         if (typeof updates._meta !== "undefined") registeredTool._meta = updates._meta
@@ -854,6 +885,16 @@ export class McpServer {
    */
   tool(name: string, description: string, cb: ToolCallback): RegisteredTool;
 
+  // v3 Zod shape specific overloads (schema provided without annotations)
+  tool<Args3 extends Z3ZodRawShape>(
+    name: string,
+    paramsSchema: Args3,
+    cb: (
+      args: z3.infer<z3.ZodObject<Args3>>,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => CallToolResult | Promise<CallToolResult>,
+  ): RegisteredTool;
+
   /**
    * Registers a tool taking either a parameter schema for validation or annotations for additional metadata.
    * This unified overload handles both `tool(name, paramsSchema, cb)` and `tool(name, annotations, cb)` cases.
@@ -865,6 +906,17 @@ export class McpServer {
     name: string,
     paramsSchemaOrAnnotations: Args | ToolAnnotations,
     cb: ToolCallback<Args>,
+  ): RegisteredTool;
+
+  // v3 Zod shape specific overload (with description, schema provided without annotations)
+  tool<Args3 extends Z3ZodRawShape>(
+    name: string,
+    description: string,
+    paramsSchema: Args3,
+    cb: (
+      args: z3.infer<z3.ZodObject<Args3>>,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => CallToolResult | Promise<CallToolResult>,
   ): RegisteredTool;
 
   /**
