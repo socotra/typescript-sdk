@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-constant-binary-expression */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import { Client } from "./index.js";
-import { z } from "zod/v4";
+import { Client } from './index.js';
+import { z } from 'zod';
 import {
     RequestSchema,
     NotificationSchema,

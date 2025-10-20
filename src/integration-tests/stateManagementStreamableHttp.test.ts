@@ -5,8 +5,14 @@ import { Client } from '../client/index.js';
 import { StreamableHTTPClientTransport } from '../client/streamableHttp.js';
 import { McpServer } from '../server/mcp.js';
 import { StreamableHTTPServerTransport } from '../server/streamableHttp.js';
-import { CallToolResultSchema, ListToolsResultSchema, ListResourcesResultSchema, ListPromptsResultSchema, LATEST_PROTOCOL_VERSION } from '../types.js';
-import { z } from 'zod/v4';
+import {
+    CallToolResultSchema,
+    ListToolsResultSchema,
+    ListResourcesResultSchema,
+    ListPromptsResultSchema,
+    LATEST_PROTOCOL_VERSION
+} from '../types.js';
+import { z } from 'zod';
 
 describe('Streamable HTTP Transport Session Management', () => {
     // Function to set up the server with optional session management

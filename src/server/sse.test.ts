@@ -2,9 +2,9 @@ import http from 'http';
 import { jest } from '@jest/globals';
 import { SSEServerTransport } from './sse.js';
 import { McpServer } from './mcp.js';
-import { createServer, type Server } from "node:http";
-import { AddressInfo } from "node:net";
-import { z } from 'zod/v4';
+import { createServer, type Server } from 'node:http';
+import { AddressInfo } from 'node:net';
+import { z } from 'zod';
 import { CallToolResult, JSONRPCMessage } from 'src/types.js';
 
 const createMockResponse = () => {

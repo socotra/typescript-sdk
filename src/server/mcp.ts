@@ -1,5 +1,4 @@
 import { Server, ServerOptions } from './index.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import { z, ZodRawShape, ZodObject, ZodString, ZodType, ZodOptional } from 'zod';
 import {
     Implementation,
@@ -103,20 +102,14 @@ export class McpServer {
                             title: tool.title,
                             description: tool.description,
                             inputSchema: tool.inputSchema
-                                ? (zodToJsonSchema(tool.inputSchema, {
-                                      strictUnions: true,
-                                      pipeStrategy: 'input'
-                                  }) as Tool['inputSchema'])
+                                ? (z.toJSONSchema(tool.inputSchema) as Tool['inputSchema'])
                                 : EMPTY_OBJECT_JSON_SCHEMA,
                             annotations: tool.annotations,
                             _meta: tool._meta
                         };
 
                         if (tool.outputSchema) {
-                            toolDefinition.outputSchema = zodToJsonSchema(tool.outputSchema, {
-                                strictUnions: true,
-                                pipeStrategy: 'output'
-                            }) as Tool['outputSchema'];
+                            toolDefinition.outputSchema = z.toJSONSchema(tool.outputSchema) as Tool['outputSchema'];
                         }
 
                         return toolDefinition;
@@ -249,11 +242,9 @@ export class McpServer {
         if (!defLike || defLike.typeName !== McpZodTypeKind.Completable) {
             return EMPTY_COMPLETION_RESULT;
         }
-        const def = (field as unknown as { _def: CompletableDef<ZodString> })._def;
-        const ctx = request.params.context;
-        const ctxForComplete = ctx && typeof ctx.arguments !== 'string' ? { arguments: ctx.arguments } : undefined;
-        const suggestions = await def.complete(request.params.argument.value, ctxForComplete);
 
+        const def: CompletableDef<ZodString> = (field as unknown as { _def: CompletableDef<ZodString> })._def;
+        const suggestions = await def.complete(request.params.argument.value, request.params.context);
         return createCompletionResult(suggestions);
     }
 
@@ -274,10 +265,7 @@ export class McpServer {
             return EMPTY_COMPLETION_RESULT;
         }
 
-        const ctx = request.params.context;
-        const ctxForComplete = ctx && typeof ctx.arguments !== 'string' ? { arguments: ctx.arguments } : undefined;
-        const suggestions = await completer(request.params.argument.value, ctxForComplete);
-
+        const suggestions = await completer(request.params.argument.value, request.params.context);
         return createCompletionResult(suggestions);
     }
 
@@ -1145,7 +1133,9 @@ export type RegisteredResourceTemplate = {
     remove(): void;
 };
 
-type PromptArgsRawShape = Record<string, ZodString | ZodOptional<ZodString>>;
+type PromptArgsRawShape = {
+    [k: string]: ZodString | ZodOptional<ZodString>;
+};
 
 export type PromptCallback<Args extends undefined | PromptArgsRawShape = undefined> = Args extends PromptArgsRawShape
     ? (
