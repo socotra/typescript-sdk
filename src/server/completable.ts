@@ -1,7 +1,7 @@
 import { ZodTypeAny } from "zod/v4";
 
 export enum McpZodTypeKind {
-  Completable = "McpCompletable",
+    Completable = 'McpCompletable'
 }
 
 export type CompleteCallback<T extends ZodTypeAny = ZodTypeAny> = (
