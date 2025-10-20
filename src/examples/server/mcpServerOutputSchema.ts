@@ -4,9 +4,9 @@
  * This demonstrates how to easily create tools with structured output
  */
 
-import { McpServer } from "../../server/mcp.js";
-import { StdioServerTransport } from "../../server/stdio.js";
-import { z } from "zod/v4";
+import { McpServer } from '../../server/mcp.js';
+import { StdioServerTransport } from '../../server/stdio.js';
+import { z } from 'zod';
 
 const server = new McpServer({
     name: 'mcp-output-schema-high-level-example',

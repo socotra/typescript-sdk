@@ -1,8 +1,8 @@
 // Run with: npx tsx src/examples/server/toolWithSampleServer.ts
 
-import { McpServer } from "../../server/mcp.js";
-import { StdioServerTransport } from "../../server/stdio.js";
-import { z } from "zod/v4";
+import { McpServer } from '../../server/mcp.js';
+import { StdioServerTransport } from '../../server/stdio.js';
+import { z } from 'zod';
 
 const mcpServer = new McpServer({
     name: 'tools-with-sample-server',

@@ -1,5 +1,5 @@
-import { z } from "zod/v4";
-import { completable } from "./completable.js";
+import { z } from 'zod';
+import { completable } from './completable.js';
 
 describe('completable', () => {
     it('preserves types and values of underlying schema', () => {
