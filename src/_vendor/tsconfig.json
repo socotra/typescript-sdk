@@ -1,0 +1,16 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "target": "es2020",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "verbatimModuleSyntax": false,
+        "strict": false,
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true,
+        "noEmit": true,
+        "types": [],
+        "lib": ["es2020", "dom"]
+    },
+    "include": ["../_vendor/**/*"]
+}
