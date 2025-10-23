@@ -268,9 +268,8 @@ export class McpServer {
             return EMPTY_COMPLETION_RESULT;
         }
 
-        // Access field schema by name; works for v3 and v4 Mini objects
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const field = (prompt.argsSchema as any).shape?.[request.params.argument.name];
+        const promptShape = getObjectShape(prompt.argsSchema);
+        const field = promptShape?.[request.params.argument.name];
         if (!field) {
             return EMPTY_COMPLETION_RESULT;
         }
@@ -1135,6 +1134,25 @@ function isZodTypeLike(value: unknown): value is AnySchema {
     return false;
 }
 
+function getObjectShape(schema: AnyObjectSchema | undefined): Record<string, AnySchema> | undefined {
+    if (!schema) return undefined;
+
+    // Zod v3 exposes `.shape`; Zod v4 keeps the shape on `_zod.def.shape`
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawShape = (schema as any).shape ?? (isZ4Schema(schema as any) ? (schema as any)._zod?.def?.shape : undefined);
+    if (!rawShape) return undefined;
+
+    if (typeof rawShape === 'function') {
+        try {
+            return rawShape();
+        } catch {
+            return undefined;
+        }
+    }
+
+    return rawShape as Record<string, AnySchema>;
+}
+
 /**
  * Additional, optional information for annotating a resource.
  */
@@ -1233,12 +1251,7 @@ export type RegisteredPrompt = {
 };
 
 function promptArgumentsFromSchema(schema: AnyObjectSchema): PromptArgument[] {
-    // v3 exposes .shape; v4 keeps the shape on _zod.def.shape
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const shape: Record<string, unknown> | undefined =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (schema as any).shape ?? (isZ4Schema(schema as any) ? (schema as any)._zod?.def?.shape : undefined);
-
+    const shape = getObjectShape(schema);
     if (!shape) return [];
 
     return Object.entries(shape).map(
@@ -1247,8 +1260,7 @@ function promptArgumentsFromSchema(schema: AnyObjectSchema): PromptArgument[] {
             // Determine required by attempting to parse `undefined`.
             // If undefined fails, the arg is required.
             const test = safeParse(field, undefined);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const required = !(test as any).success;
+            const required = !test.success;
 
             return {
                 name,

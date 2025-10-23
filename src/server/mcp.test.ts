@@ -1,7 +1,8 @@
 import { McpServer } from './mcp.js';
 import { Client } from '../client/index.js';
 import { InMemoryTransport } from '../inMemory.js';
-import { z } from 'zod';
+import * as z from 'zod/v4';
+import * as zMini from 'zod/v4-mini';
 import {
     ListToolsResultSchema,
     CallToolResultSchema,
@@ -522,8 +523,8 @@ describe('tool()', () => {
         mcpServer.tool(
             'test',
             {
-                name: z.string(),
-                value: z.number()
+                name: zMini.string(),
+                value: zMini.number()
             },
             async ({ name, value }) => ({
                 content: [
@@ -695,14 +696,14 @@ describe('tool()', () => {
             version: '1.0'
         });
 
-        mcpServer.tool('test', { name: z.string() }, { title: 'Test Tool', readOnlyHint: true }, async ({ name }) => ({
+        mcpServer.tool('test', { name: zMini.string() }, { title: 'Test Tool', readOnlyHint: true }, async ({ name }) => ({
             content: [{ type: 'text', text: `Hello, ${name}!` }]
         }));
 
         mcpServer.registerTool(
             'test (new api)',
             {
-                inputSchema: { name: z.string() },
+                inputSchema: { name: zMini.string() },
                 annotations: { title: 'Test Tool', readOnlyHint: true }
             },
             async ({ name }) => ({
@@ -879,8 +880,8 @@ describe('tool()', () => {
             'test (new api)',
             {
                 inputSchema: {
-                    name: z.string(),
-                    value: z.number()
+                    name: zMini.string(),
+                    value: zMini.number()
                 }
             },
             async ({ name, value }) => ({
@@ -3081,7 +3082,7 @@ describe('prompt()', () => {
         );
 
         // Register a prompt with completion
-        mcpServer.prompt('echo', { message: completable(z.string(), () => ['hello', 'world']) }, ({ message }) => ({
+        mcpServer.prompt('echo', { message: completable(zMini.string(), () => ['hello', 'world']) }, ({ message }) => ({
             messages: [
                 {
                     role: 'user',
@@ -3153,7 +3154,7 @@ describe('prompt()', () => {
         mcpServer.prompt(
             'test-prompt',
             {
-                name: completable(z.string(), () => ['Alice', 'Bob', 'Charlie'])
+                name: completable(zMini.string(), () => ['Alice', 'Bob', 'Charlie'])
             },
             async ({ name }) => ({
                 messages: [
@@ -3192,7 +3193,7 @@ describe('prompt()', () => {
         mcpServer.prompt(
             'test-prompt',
             {
-                name: completable(z.string(), () => ['Alice', 'Bob', 'Charlie'])
+                name: completable(zMini.string(), () => ['Alice', 'Bob', 'Charlie'])
             },
             async ({ name }) => ({
                 messages: [
@@ -3249,7 +3250,7 @@ describe('prompt()', () => {
         mcpServer.prompt(
             'test-prompt',
             {
-                name: completable(z.string(), test => ['Alice', 'Bob', 'Charlie'].filter(value => value.startsWith(test)))
+                name: completable(zMini.string(), test => ['Alice', 'Bob', 'Charlie'].filter(value => value.startsWith(test)))
             },
             async ({ name }) => ({
                 messages: [
@@ -3741,10 +3742,10 @@ describe('Tool title precedence', () => {
                 title: 'Team Greeting',
                 description: 'Generate a greeting for team members',
                 argsSchema: {
-                    department: completable(z.string(), value => {
+                    department: completable(zMini.string(), value => {
                         return ['engineering', 'sales', 'marketing', 'support'].filter(d => d.startsWith(value));
                     }),
-                    name: completable(z.string(), (value, context) => {
+                    name: completable(zMini.string(), (value, context) => {
                         const department = context?.arguments?.['department'];
                         if (department === 'engineering') {
                             return ['Alice', 'Bob', 'Charlie'].filter(n => n.startsWith(value));
