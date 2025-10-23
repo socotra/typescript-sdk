@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { ZodStringDef } from 'zod/v3';
-import { ErrorMessages, setResponseValueAndErrors } from '../errorMessages';
-import { Refs } from '../Refs';
+import { ErrorMessages, setResponseValueAndErrors } from '../errorMessages.js';
+import { Refs } from '../Refs.js';
 
 let emojiRegex: RegExp | undefined;
 

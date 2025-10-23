@@ -1,6 +1,6 @@
 import { ZodSchema, ZodTypeDef } from 'zod/v3';
-import { Refs, Seen } from './Refs';
-import { JsonSchema7Type } from './parseDef';
+import { Refs, Seen } from './Refs.js';
+import { JsonSchema7Type } from './parseDef.js';
 
 export type Targets = 'jsonSchema7' | 'jsonSchema2019-09' | 'openApi3';
 
