@@ -1,13 +1,13 @@
 import { createServer, type Server } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { randomUUID } from 'node:crypto';
-import { Client } from '../client/index.js';
-import { StreamableHTTPClientTransport } from '../client/streamableHttp.js';
-import { McpServer } from '../server/mcp.js';
-import { StreamableHTTPServerTransport } from '../server/streamableHttp.js';
-import { CallToolResultSchema, LoggingMessageNotificationSchema } from '../types.js';
-import * as z from 'zod/v4';
-import { InMemoryEventStore } from '../examples/shared/inMemoryEventStore.js';
+import { Client } from '../../client/index.js';
+import { StreamableHTTPClientTransport } from '../../client/streamableHttp.js';
+import { McpServer } from '../../server/mcp.js';
+import { StreamableHTTPServerTransport } from '../../server/streamableHttp.js';
+import { CallToolResultSchema, LoggingMessageNotificationSchema } from '../../types.js';
+import * as z from 'zod/v3';
+import { InMemoryEventStore } from '../../examples/shared/inMemoryEventStore.js';
 
 describe('Transport resumability', () => {
     let server: Server;

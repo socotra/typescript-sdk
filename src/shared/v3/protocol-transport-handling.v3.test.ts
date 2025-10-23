@@ -1,8 +1,8 @@
 import { describe, expect, test, beforeEach } from '@jest/globals';
-import { Protocol } from './protocol.js';
-import { Transport } from './transport.js';
-import { Request, Notification, Result, JSONRPCMessage } from '../types.js';
-import * as z from 'zod/v4';
+import { Protocol } from '../protocol.js';
+import { Transport } from '../transport.js';
+import { Request, Notification, Result, JSONRPCMessage } from '../../types.js';
+import * as z from 'zod/v3';
 
 // Mock Transport class
 class MockTransport implements Transport {

@@ -1,7 +1,7 @@
-import * as z from 'zod/v4';
-import { ClientCapabilities, ErrorCode, McpError, Notification, Request, Result, ServerCapabilities } from '../types.js';
-import { Protocol, mergeCapabilities } from './protocol.js';
-import { Transport } from './transport.js';
+import * as z from 'zod/v3';
+import { ClientCapabilities, ErrorCode, McpError, Notification, Request, Result, ServerCapabilities } from '../../types.js';
+import { Protocol, mergeCapabilities } from '../protocol.js';
+import { Transport } from '../transport.js';
 
 // Mock Transport class
 class MockTransport implements Transport {

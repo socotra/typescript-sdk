@@ -1,10 +1,9 @@
 import * as z from 'zod/v3';
-import type { ZodTypeAny } from 'zod';
 
 import { zodToJsonSchema as fallbackZodToJsonSchema } from '../_vendor/zodToJsonSchema.js';
 import type { Options as FallbackOptions } from '../_vendor/Options.js';
 
-type NativeToJsonSchema = (schema: ZodTypeAny, options?: { target?: 'draft-7' }) => unknown;
+type NativeToJsonSchema = (schema: z.ZodTypeAny, options?: { target?: 'draft-7' }) => unknown;
 type ZodNamespace = typeof z;
 
 const fallbackOptions: Partial<FallbackOptions> = {
@@ -39,7 +38,7 @@ const resolveNativeConverter = (): NativeToJsonSchema | undefined => {
 
 export const usesNativeJsonSchema = (): boolean => resolveNativeConverter() !== undefined;
 
-export const generateJsonSchema = (schema: ZodTypeAny) => {
+export const generateJsonSchema = (schema: z.ZodTypeAny) => {
     const nativeConverter = resolveNativeConverter();
     if (nativeConverter) {
         try {
@@ -49,7 +48,7 @@ export const generateJsonSchema = (schema: ZodTypeAny) => {
         }
     }
 
-    return (fallbackZodToJsonSchema as unknown as (s: ZodTypeAny, o?: Partial<FallbackOptions> | string) => unknown)(
+    return (fallbackZodToJsonSchema as unknown as (s: z.ZodTypeAny, o?: Partial<FallbackOptions> | string) => unknown)(
         schema,
         fallbackOptions
     );
