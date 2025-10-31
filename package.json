@@ -89,11 +89,15 @@
         "zod": "^3.25 || ^4.0"
     },
     "peerDependencies": {
-        "@cfworker/json-schema": "^4.1.1"
+        "@cfworker/json-schema": "^4.1.1",
+        "zod": "^3.25 || ^4.0"
     },
     "peerDependenciesMeta": {
         "@cfworker/json-schema": {
             "optional": true
+        },
+        "zod": {
+            "optional": false
         }
     },
     "devDependencies": {
@@ -120,14 +124,6 @@
         "typescript": "^5.5.4",
         "typescript-eslint": "^8.0.0",
         "ws": "^8.18.0"
-    },
-    "peerDependencies": {
-        "zod": "^3.25 || ^4.0"
-    },
-    "peerDependenciesMeta": {
-        "zod": {
-            "optional": false
-        }
     },
     "resolutions": {
         "strip-ansi": "6.0.1"
