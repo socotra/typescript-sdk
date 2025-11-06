@@ -1,7 +1,7 @@
 import * as z from 'zod/v3';
 
-import { zodToJsonSchema as fallbackZodToJsonSchema } from '../_vendor/zodToJsonSchema.js';
-import type { Options as FallbackOptions } from '../_vendor/Options.js';
+import { zodToJsonSchema as fallbackZodToJsonSchema } from '../_vendor/zod-to-json-schema/index.js';
+import type { Options as FallbackOptions } from '../_vendor/zod-to-json-schema/Options.js';
 
 type NativeToJsonSchema = (schema: z.ZodTypeAny, options?: { target?: 'draft-7' }) => unknown;
 type ZodNamespace = typeof z;
