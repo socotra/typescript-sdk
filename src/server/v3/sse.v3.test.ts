@@ -5,7 +5,7 @@ import { McpServer } from '../mcp.js';
 import { createServer, type Server } from 'node:http';
 import { AddressInfo } from 'node:net';
 import * as z from 'zod/v3';
-import { CallToolResult, JSONRPCMessage } from 'src/types.js';
+import { CallToolResult, JSONRPCMessage } from '../../types.js';
 
 const createMockResponse = () => {
     const res = {
