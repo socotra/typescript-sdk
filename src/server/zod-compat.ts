@@ -188,3 +188,93 @@ export function normalizeObjectSchema(schema: AnySchema | ZodRawShapeCompat | un
 
     return undefined;
 }
+
+// --- Error message extraction ---
+/**
+ * Safely extracts an error message from a parse result error.
+ * Zod errors can have different structures, so we handle various cases.
+ */
+export function getParseErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object') {
+        // Try common error structures
+        if ('message' in error && typeof error.message === 'string') {
+            return error.message;
+        }
+        if ('issues' in error && Array.isArray(error.issues) && error.issues.length > 0) {
+            const firstIssue = error.issues[0];
+            if (firstIssue && typeof firstIssue === 'object' && 'message' in firstIssue) {
+                return String(firstIssue.message);
+            }
+        }
+        // Fallback: try to stringify the error
+        try {
+            return JSON.stringify(error);
+        } catch {
+            return String(error);
+        }
+    }
+    return String(error);
+}
+
+// --- Schema metadata access ---
+/**
+ * Gets the description from a schema, if available.
+ * Works with both Zod v3 and v4.
+ */
+export function getSchemaDescription(schema: AnySchema): string | undefined {
+    if (isZ4Schema(schema)) {
+        const v4Schema = schema as unknown as ZodV4Internal;
+        return v4Schema._zod?.def?.description;
+    }
+    const v3Schema = schema as unknown as ZodV3Internal;
+    // v3 may have description on the schema itself or in _def
+    return (schema as { description?: string }).description ?? v3Schema._def?.description;
+}
+
+/**
+ * Checks if a schema is optional.
+ * Works with both Zod v3 and v4.
+ */
+export function isSchemaOptional(schema: AnySchema): boolean {
+    if (isZ4Schema(schema)) {
+        const v4Schema = schema as unknown as ZodV4Internal;
+        return v4Schema._zod?.def?.typeName === 'ZodOptional';
+    }
+    const v3Schema = schema as unknown as ZodV3Internal;
+    // v3 has isOptional() method
+    if (typeof (schema as { isOptional?: () => boolean }).isOptional === 'function') {
+        return (schema as { isOptional: () => boolean }).isOptional();
+    }
+    return v3Schema._def?.typeName === 'ZodOptional';
+}
+
+/**
+ * Gets the literal value from a schema, if it's a literal schema.
+ * Works with both Zod v3 and v4.
+ * Returns undefined if the schema is not a literal or the value cannot be determined.
+ */
+export function getLiteralValue(schema: AnySchema): unknown {
+    if (isZ4Schema(schema)) {
+        const v4Schema = schema as unknown as ZodV4Internal;
+        const def = v4Schema._zod?.def;
+        if (def) {
+            // Try various ways to get the literal value
+            if (def.value !== undefined) return def.value;
+            if (Array.isArray(def.values) && def.values.length > 0) {
+                return def.values[0];
+            }
+        }
+    }
+    const v3Schema = schema as unknown as ZodV3Internal;
+    const def = v3Schema._def;
+    if (def) {
+        if (def.value !== undefined) return def.value;
+        if (Array.isArray(def.values) && def.values.length > 0) {
+            return def.values[0];
+        }
+    }
+    // Fallback: check for direct value property (some Zod versions)
+    const directValue = (schema as { value?: unknown }).value;
+    if (directValue !== undefined) return directValue;
+    return undefined;
+}

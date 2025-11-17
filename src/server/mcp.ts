@@ -7,9 +7,12 @@ import {
     ShapeOutput,
     normalizeObjectSchema,
     safeParseAsync,
-    isZ4Schema,
     getObjectShape,
-    objectFromShape
+    objectFromShape,
+    getParseErrorMessage,
+    getSchemaDescription,
+    isSchemaOptional,
+    getLiteralValue
 } from './zod-compat.js';
 import { toJsonSchemaCompat } from './zod-json-schema-compat.js';
 import {
@@ -169,7 +172,7 @@ export class McpServer {
                     if (!parseResult.success) {
                         throw new McpError(
                             ErrorCode.InvalidParams,
-                            `Input validation error: Invalid arguments for tool ${request.params.name}: ${(parseResult as any).error.message}`
+                            `Input validation error: Invalid arguments for tool ${request.params.name}: ${getParseErrorMessage(parseResult.error)}`
                         );
                     }
 
@@ -195,7 +198,7 @@ export class McpServer {
                     if (!parseResult.success) {
                         throw new McpError(
                             ErrorCode.InvalidParams,
-                            `Output validation error: Invalid structured content for tool ${request.params.name}: ${(parseResult as any).error.message}`
+                            `Output validation error: Invalid structured content for tool ${request.params.name}: ${getParseErrorMessage(parseResult.error)}`
                         );
                     }
                 }
@@ -441,7 +444,7 @@ export class McpServer {
                 if (!parseResult.success) {
                     throw new McpError(
                         ErrorCode.InvalidParams,
-                        `Invalid arguments for prompt ${request.params.name}: ${(parseResult as any).error.message}`
+                        `Invalid arguments for prompt ${request.params.name}: ${getParseErrorMessage(parseResult.error)}`
                     );
                 }
 
@@ -1079,10 +1082,7 @@ export class ResourceTemplate {
  * - Both fields are optional but typically one should be provided
  */
 export type ToolCallback<Args extends undefined | ZodRawShapeCompat | AnySchema = undefined> = Args extends ZodRawShapeCompat
-    ? (
-          args: ShapeOutput<Args>,
-          extra: RequestHandlerExtra<ServerRequest, ServerNotification>
-      ) => CallToolResult | Promise<CallToolResult>
+    ? (args: ShapeOutput<Args>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => CallToolResult | Promise<CallToolResult>
     : Args extends AnySchema
       ? (
             args: SchemaOutput<Args>,
@@ -1228,10 +1228,7 @@ export type RegisteredResourceTemplate = {
 type PromptArgsRawShape = ZodRawShapeCompat;
 
 export type PromptCallback<Args extends undefined | PromptArgsRawShape = undefined> = Args extends PromptArgsRawShape
-    ? (
-          args: ShapeOutput<Args>,
-          extra: RequestHandlerExtra<ServerRequest, ServerNotification>
-      ) => GetPromptResult | Promise<GetPromptResult>
+    ? (args: ShapeOutput<Args>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => GetPromptResult | Promise<GetPromptResult>
     : (extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => GetPromptResult | Promise<GetPromptResult>;
 
 export type RegisteredPrompt = {
@@ -1258,9 +1255,9 @@ function promptArgumentsFromSchema(schema: AnyObjectSchema): PromptArgument[] {
     if (!shape) return [];
     return Object.entries(shape).map(([name, field]): PromptArgument => {
         // Get description - works for both v3 and v4
-        const description = (field as any).description ?? (field as any)._def?.description;
+        const description = getSchemaDescription(field);
         // Check if optional - works for both v3 and v4
-        const isOptional = (field as any).isOptional?.() ?? (field as any)._def?.typeName === 'ZodOptional';
+        const isOptional = isSchemaOptional(field);
         return {
             name,
             description,
@@ -1277,21 +1274,9 @@ function getMethodValue(schema: AnyObjectSchema): string {
     }
 
     // Extract literal value - works for both v3 and v4
-    const v4Def = isZ4Schema(methodSchema) ? (methodSchema as any)._zod?.def : undefined;
-    const legacyDef = (methodSchema as any)._def;
-
-    const candidates = [
-        v4Def?.value,
-        legacyDef?.value,
-        Array.isArray(v4Def?.values) ? v4Def.values[0] : undefined,
-        Array.isArray(legacyDef?.values) ? legacyDef.values[0] : undefined,
-        (methodSchema as any).value
-    ];
-
-    for (const candidate of candidates) {
-        if (typeof candidate === 'string') {
-            return candidate;
-        }
+    const value = getLiteralValue(methodSchema);
+    if (typeof value === 'string') {
+        return value;
     }
 
     throw new Error('Schema method literal must be a string');

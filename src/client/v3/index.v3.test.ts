@@ -630,6 +630,7 @@ test('should typecheck', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const WeatherRequestSchema = (GetWeatherRequestSchema as unknown as z.ZodObject<any>).or(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         GetForecastRequestSchema as unknown as z.ZodObject<any>
     ) as AnyObjectSchema;
     const WeatherNotificationSchema = WeatherForecastNotificationSchema as AnyObjectSchema;
