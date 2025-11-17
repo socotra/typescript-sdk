@@ -16,7 +16,7 @@ export type ZodRawShapeCompat = Record<string, AnySchema>;
 
 // --- Internal property access helpers ---
 // These types help us safely access internal properties that differ between v3 and v4
-interface ZodV3Internal {
+export interface ZodV3Internal {
     _def?: {
         typeName?: string;
         value?: unknown;
@@ -25,9 +25,10 @@ interface ZodV3Internal {
         description?: string;
     };
     shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+    value?: unknown;
 }
 
-interface ZodV4Internal {
+export interface ZodV4Internal {
     _zod?: {
         def?: {
             typeName?: string;
@@ -37,6 +38,7 @@ interface ZodV4Internal {
             description?: string;
         };
     };
+    value?: unknown;
 }
 
 // --- Type inference helpers ---

@@ -42,34 +42,16 @@ import {
 } from '../types.js';
 import { AjvJsonSchemaValidator } from '../validation/ajv-provider.js';
 import type { JsonSchemaType, JsonSchemaValidator, jsonSchemaValidator } from '../validation/types.js';
-import { AnyObjectSchema, SchemaOutput, getObjectShape, isZ4Schema, safeParse, type AnySchema } from '../server/zod-compat.js';
+import {
+    AnyObjectSchema,
+    SchemaOutput,
+    getObjectShape,
+    isZ4Schema,
+    safeParse,
+    type ZodV3Internal,
+    type ZodV4Internal
+} from '../server/zod-compat.js';
 import type { RequestHandlerExtra } from '../shared/protocol.js';
-
-// Helper interfaces for accessing Zod internal properties (same as in zod-compat.ts and protocol.ts)
-interface ZodV3Internal {
-    _def?: {
-        typeName?: string;
-        value?: unknown;
-        values?: unknown[];
-        shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
-        description?: string;
-    };
-    shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
-    value?: unknown;
-}
-
-interface ZodV4Internal {
-    _zod?: {
-        def?: {
-            typeName?: string;
-            value?: unknown;
-            values?: unknown[];
-            shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
-            description?: string;
-        };
-    };
-    value?: unknown;
-}
 
 /**
  * Elicitation default application helper. Applies defaults to the data based on the schema.

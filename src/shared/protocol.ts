@@ -1,30 +1,4 @@
-import { AnySchema, AnyObjectSchema, SchemaOutput, getObjectShape, safeParse, isZ4Schema } from '../server/zod-compat.js';
-
-// Helper interfaces for accessing Zod internal properties (same as in zod-compat.ts)
-interface ZodV3Internal {
-    _def?: {
-        typeName?: string;
-        value?: unknown;
-        values?: unknown[];
-        shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
-        description?: string;
-    };
-    shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
-    value?: unknown;
-}
-
-interface ZodV4Internal {
-    _zod?: {
-        def?: {
-            typeName?: string;
-            value?: unknown;
-            values?: unknown[];
-            shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
-            description?: string;
-        };
-    };
-    value?: unknown;
-}
+import { AnySchema, AnyObjectSchema, SchemaOutput, getObjectShape, safeParse, isZ4Schema, type ZodV3Internal, type ZodV4Internal } from '../server/zod-compat.js';
 import {
     CancelledNotificationSchema,
     ClientCapabilities,
