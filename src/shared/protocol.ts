@@ -1,4 +1,30 @@
-import { ZodLiteral, ZodObject, ZodType, z } from 'zod';
+import { AnySchema, AnyObjectSchema, SchemaOutput, getObjectShape, safeParse, isZ4Schema } from '../server/zod-compat.js';
+
+// Helper interfaces for accessing Zod internal properties (same as in zod-compat.ts)
+interface ZodV3Internal {
+    _def?: {
+        typeName?: string;
+        value?: unknown;
+        values?: unknown[];
+        shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+        description?: string;
+    };
+    shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+    value?: unknown;
+}
+
+interface ZodV4Internal {
+    _zod?: {
+        def?: {
+            typeName?: string;
+            value?: unknown;
+            values?: unknown[];
+            shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+            description?: string;
+        };
+    };
+    value?: unknown;
+}
 import {
     CancelledNotificationSchema,
     ClientCapabilities,
@@ -152,7 +178,7 @@ export type RequestHandlerExtra<SendRequestT extends Request, SendNotificationT 
      *
      * This is used by certain transports to correctly associate related messages.
      */
-    sendRequest: <U extends ZodType<object>>(request: SendRequestT, resultSchema: U, options?: RequestOptions) => Promise<z.infer<U>>;
+    sendRequest: <U extends AnySchema>(request: SendRequestT, resultSchema: U, options?: RequestOptions) => Promise<SchemaOutput<U>>;
 };
 
 /**
@@ -489,7 +515,7 @@ export abstract class Protocol<SendRequestT extends Request, SendNotificationT e
      *
      * Do not use this method to emit notifications! Use notification() instead.
      */
-    request<T extends ZodType<object>>(request: SendRequestT, resultSchema: T, options?: RequestOptions): Promise<z.infer<T>> {
+    request<T extends AnySchema>(request: SendRequestT, resultSchema: T, options?: RequestOptions): Promise<SchemaOutput<T>> {
         const { relatedRequestId, resumptionToken, onresumptiontoken } = options ?? {};
 
         return new Promise((resolve, reject) => {
@@ -554,8 +580,13 @@ export abstract class Protocol<SendRequestT extends Request, SendNotificationT e
                 }
 
                 try {
-                    const result = resultSchema.parse(response.result);
-                    resolve(result);
+                    const parseResult = safeParse(resultSchema, response.result);
+                    if (!parseResult.success) {
+                        // Type guard: if success is false, error is guaranteed to exist
+                        reject(parseResult.error);
+                    } else {
+                        resolve(parseResult.data as SchemaOutput<T>);
+                    }
                 } catch (error) {
                     reject(error);
                 }
@@ -638,19 +669,19 @@ export abstract class Protocol<SendRequestT extends Request, SendNotificationT e
      *
      * Note that this will replace any previous request handler for the same method.
      */
-    setRequestHandler<
-        T extends ZodObject<{
-            method: ZodLiteral<string>;
-        }>
-    >(
+    setRequestHandler<T extends AnyObjectSchema>(
         requestSchema: T,
-        handler: (request: z.infer<T>, extra: RequestHandlerExtra<SendRequestT, SendNotificationT>) => SendResultT | Promise<SendResultT>
+        handler: (
+            request: SchemaOutput<T>,
+            extra: RequestHandlerExtra<SendRequestT, SendNotificationT>
+        ) => SendResultT | Promise<SendResultT>
     ): void {
-        const method = requestSchema.shape.method.value;
+        const method = getMethodLiteral(requestSchema);
         this.assertRequestHandlerCapability(method);
 
         this._requestHandlers.set(method, (request, extra) => {
-            return Promise.resolve(handler(requestSchema.parse(request), extra));
+            const parsed = parseWithCompat(requestSchema, request) as SchemaOutput<T>;
+            return Promise.resolve(handler(parsed, extra));
         });
     }
 
@@ -675,14 +706,15 @@ export abstract class Protocol<SendRequestT extends Request, SendNotificationT e
      *
      * Note that this will replace any previous notification handler for the same method.
      */
-    setNotificationHandler<
-        T extends ZodObject<{
-            method: ZodLiteral<string>;
-        }>
-    >(notificationSchema: T, handler: (notification: z.infer<T>) => void | Promise<void>): void {
-        this._notificationHandlers.set(notificationSchema.shape.method.value, notification =>
-            Promise.resolve(handler(notificationSchema.parse(notification)))
-        );
+    setNotificationHandler<T extends AnyObjectSchema>(
+        notificationSchema: T,
+        handler: (notification: SchemaOutput<T>) => void | Promise<void>
+    ): void {
+        const method = getMethodLiteral(notificationSchema);
+        this._notificationHandlers.set(method, notification => {
+            const parsed = parseWithCompat(notificationSchema, notification) as SchemaOutput<T>;
+            return Promise.resolve(handler(parsed));
+        });
     }
 
     /**
@@ -713,4 +745,56 @@ export function mergeCapabilities<T extends ServerCapabilities | ClientCapabilit
         }
     }
     return result;
+}
+
+// Helper functions for Zod v3/v4 compatibility
+
+function getMethodLiteral(schema: AnyObjectSchema): string {
+    const shape = getObjectShape(schema);
+    const methodSchema = shape?.method as AnySchema | undefined;
+    if (!methodSchema) {
+        throw new Error('Schema is missing a method literal');
+    }
+
+    const value = getLiteralValue(methodSchema);
+    if (typeof value !== 'string') {
+        throw new Error('Schema method literal must be a string');
+    }
+
+    return value;
+}
+
+function getLiteralValue(schema: AnySchema): unknown {
+    if (isZ4Schema(schema)) {
+        const v4Schema = schema as unknown as ZodV4Internal;
+        const v4Def = v4Schema._zod?.def;
+        const candidates = [v4Def?.value, Array.isArray(v4Def?.values) ? v4Def.values[0] : undefined, v4Schema.value];
+
+        for (const candidate of candidates) {
+            if (typeof candidate !== 'undefined') {
+                return candidate;
+            }
+        }
+    } else {
+        const v3Schema = schema as unknown as ZodV3Internal;
+        const legacyDef = v3Schema._def;
+        const candidates = [legacyDef?.value, Array.isArray(legacyDef?.values) ? legacyDef.values[0] : undefined, v3Schema.value];
+
+        for (const candidate of candidates) {
+            if (typeof candidate !== 'undefined') {
+                return candidate;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+function parseWithCompat(schema: AnySchema, data: unknown): unknown {
+    const result = safeParse(schema, data);
+    if (!result.success) {
+        // Type guard: if success is false, error is guaranteed to exist
+        throw result.error;
+    }
+    return result.data;
 }

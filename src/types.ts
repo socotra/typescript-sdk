@@ -1,4 +1,4 @@
-import { z, ZodTypeAny } from 'zod';
+import * as z from 'zod/v4';
 import { AuthInfo } from './server/auth/types.js';
 
 export const LATEST_PROTOCOL_VERSION = '2025-06-18';
@@ -1375,7 +1375,7 @@ export const ElicitResultSchema = ResultSchema.extend({
      * The submitted form data, only present when action is "accept".
      * Contains values matching the requested schema.
      */
-    content: z.record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])).optional()
+    content: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])).optional()
 });
 
 /* Autocomplete */
@@ -1593,7 +1593,7 @@ type Flatten<T> = T extends Primitive
             ? { [K in keyof T]: Flatten<T[K]> }
             : T;
 
-type Infer<Schema extends ZodTypeAny> = Flatten<z.infer<Schema>>;
+type Infer<Schema extends z.ZodTypeAny> = Flatten<z.infer<Schema>>;
 
 /**
  * Headers that are compatible with both Node.js and the browser.

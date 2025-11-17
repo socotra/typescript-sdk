@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod/v4';
 import { Client } from '../client/index.js';
 import { InMemoryTransport } from '../inMemory.js';
 import { getDisplayName } from '../shared/metadataUtils.js';
@@ -95,17 +95,18 @@ describe('McpServer', () => {
             },
             async ({ steps }, { sendNotification, _meta }) => {
                 const progressToken = _meta?.progressToken;
+                const stepCount = steps as number;
 
                 if (progressToken) {
                     // Send progress notification for each step
-                    for (let i = 1; i <= steps; i++) {
+                    for (let i = 1; i <= stepCount; i++) {
                         await sendNotification({
                             method: 'notifications/progress',
                             params: {
                                 progressToken,
                                 progress: i,
-                                total: steps,
-                                message: `Completed step ${i} of ${steps}`
+                                total: stepCount,
+                                message: `Completed step ${i} of ${stepCount}`
                             }
                         });
                     }

@@ -42,8 +42,34 @@ import {
 } from '../types.js';
 import { AjvJsonSchemaValidator } from '../validation/ajv-provider.js';
 import type { JsonSchemaType, JsonSchemaValidator, jsonSchemaValidator } from '../validation/types.js';
-import { ZodLiteral, ZodObject, z } from 'zod';
+import { AnyObjectSchema, SchemaOutput, getObjectShape, isZ4Schema, safeParse, type AnySchema } from '../server/zod-compat.js';
 import type { RequestHandlerExtra } from '../shared/protocol.js';
+
+// Helper interfaces for accessing Zod internal properties (same as in zod-compat.ts and protocol.ts)
+interface ZodV3Internal {
+    _def?: {
+        typeName?: string;
+        value?: unknown;
+        values?: unknown[];
+        shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+        description?: string;
+    };
+    shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+    value?: unknown;
+}
+
+interface ZodV4Internal {
+    _zod?: {
+        def?: {
+            typeName?: string;
+            value?: unknown;
+            values?: unknown[];
+            shape?: Record<string, AnySchema> | (() => Record<string, AnySchema>);
+            description?: string;
+        };
+    };
+    value?: unknown;
+}
 
 /**
  * Elicitation default application helper. Applies defaults to the data based on the schema.
@@ -188,33 +214,56 @@ export class Client<
     /**
      * Override request handler registration to enforce client-side validation for elicitation.
      */
-    public override setRequestHandler<
-        T extends ZodObject<{
-            method: ZodLiteral<string>;
-        }>
-    >(
+    public override setRequestHandler<T extends AnyObjectSchema>(
         requestSchema: T,
         handler: (
-            request: z.infer<T>,
+            request: SchemaOutput<T>,
             extra: RequestHandlerExtra<ClientRequest | RequestT, ClientNotification | NotificationT>
         ) => ClientResult | ResultT | Promise<ClientResult | ResultT>
     ): void {
-        const method = requestSchema.shape.method.value;
+        const shape = getObjectShape(requestSchema);
+        const methodSchema = shape?.method;
+        if (!methodSchema) {
+            throw new Error('Schema is missing a method literal');
+        }
+
+        // Extract literal value using type-safe property access
+        let methodValue: unknown;
+        if (isZ4Schema(methodSchema)) {
+            const v4Schema = methodSchema as unknown as ZodV4Internal;
+            const v4Def = v4Schema._zod?.def;
+            methodValue = v4Def?.value ?? v4Schema.value;
+        } else {
+            const v3Schema = methodSchema as unknown as ZodV3Internal;
+            const legacyDef = v3Schema._def;
+            methodValue = legacyDef?.value ?? v3Schema.value;
+        }
+
+        if (typeof methodValue !== 'string') {
+            throw new Error('Schema method literal must be a string');
+        }
+        const method = methodValue;
         if (method === 'elicitation/create') {
             const wrappedHandler = async (
-                request: z.infer<T>,
+                request: SchemaOutput<T>,
                 extra: RequestHandlerExtra<ClientRequest | RequestT, ClientNotification | NotificationT>
             ): Promise<ClientResult | ResultT> => {
-                const validatedRequest = ElicitRequestSchema.safeParse(request);
+                const validatedRequest = safeParse(ElicitRequestSchema, request);
                 if (!validatedRequest.success) {
-                    throw new McpError(ErrorCode.InvalidParams, `Invalid elicitation request: ${validatedRequest.error.message}`);
+                    // Type guard: if success is false, error is guaranteed to exist
+                    const errorMessage =
+                        validatedRequest.error instanceof Error ? validatedRequest.error.message : String(validatedRequest.error);
+                    throw new McpError(ErrorCode.InvalidParams, `Invalid elicitation request: ${errorMessage}`);
                 }
 
                 const result = await Promise.resolve(handler(request, extra));
 
-                const validationResult = ElicitResultSchema.safeParse(result);
+                const validationResult = safeParse(ElicitResultSchema, result);
                 if (!validationResult.success) {
-                    throw new McpError(ErrorCode.InvalidParams, `Invalid elicitation result: ${validationResult.error.message}`);
+                    // Type guard: if success is false, error is guaranteed to exist
+                    const errorMessage =
+                        validationResult.error instanceof Error ? validationResult.error.message : String(validationResult.error);
+                    throw new McpError(ErrorCode.InvalidParams, `Invalid elicitation result: ${errorMessage}`);
                 }
 
                 const validatedResult = validationResult.data;
