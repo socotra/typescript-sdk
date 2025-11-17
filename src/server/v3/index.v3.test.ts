@@ -19,6 +19,7 @@ import {
     SUPPORTED_PROTOCOL_VERSIONS
 } from '../../types.js';
 import { Server } from '../index.js';
+import { AnyObjectSchema } from '../zod-compat.js';
 
 test('should accept latest protocol version', async () => {
     let sendPromiseResolve: (value: unknown) => void;
@@ -632,39 +633,48 @@ test('should only allow setRequestHandler for declared capabilities', () => {
   Test that custom request/notification/result schemas can be used with the Server class.
   */
 test('should typecheck', () => {
-    const GetWeatherRequestSchema = RequestSchema.extend({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const GetWeatherRequestSchema = (RequestSchema as unknown as z.ZodObject<any>).extend({
         method: z.literal('weather/get'),
         params: z.object({
             city: z.string()
         })
-    });
+    }) as AnyObjectSchema;
 
-    const GetForecastRequestSchema = RequestSchema.extend({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const GetForecastRequestSchema = (RequestSchema as unknown as z.ZodObject<any>).extend({
         method: z.literal('weather/forecast'),
         params: z.object({
             city: z.string(),
             days: z.number()
         })
-    });
+    }) as AnyObjectSchema;
 
-    const WeatherForecastNotificationSchema = NotificationSchema.extend({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const WeatherForecastNotificationSchema = (NotificationSchema as unknown as z.ZodObject<any>).extend({
         method: z.literal('weather/alert'),
         params: z.object({
             severity: z.enum(['warning', 'watch']),
             message: z.string()
         })
-    });
+    }) as AnyObjectSchema;
 
-    const WeatherRequestSchema = GetWeatherRequestSchema.or(GetForecastRequestSchema);
-    const WeatherNotificationSchema = WeatherForecastNotificationSchema;
-    const WeatherResultSchema = ResultSchema.extend({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const WeatherRequestSchema = (GetWeatherRequestSchema as unknown as z.ZodObject<any>).or(
+        GetForecastRequestSchema as unknown as z.ZodObject<any>
+    ) as AnyObjectSchema;
+    const WeatherNotificationSchema = WeatherForecastNotificationSchema as AnyObjectSchema;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const WeatherResultSchema = (ResultSchema as unknown as z.ZodObject<any>).extend({
         temperature: z.number(),
         conditions: z.string()
-    });
+    }) as AnyObjectSchema;
 
-    type WeatherRequest = z.infer<typeof WeatherRequestSchema>;
-    type WeatherNotification = z.infer<typeof WeatherNotificationSchema>;
-    type WeatherResult = z.infer<typeof WeatherResultSchema>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type InferSchema<T> = T extends z.ZodType<infer Output, any, any> ? Output : never;
+    type WeatherRequest = InferSchema<typeof WeatherRequestSchema>;
+    type WeatherNotification = InferSchema<typeof WeatherNotificationSchema>;
+    type WeatherResult = InferSchema<typeof WeatherResultSchema>;
 
     // Create a typed Server for weather data
     const weatherServer = new Server<WeatherRequest, WeatherNotification, WeatherResult>(
@@ -691,7 +701,9 @@ test('should typecheck', () => {
     });
 
     weatherServer.setNotificationHandler(WeatherForecastNotificationSchema, notification => {
-        console.log(`Weather alert: ${notification.params.message}`);
+        // Type assertion needed for v3/v4 schema mixing
+        const params = notification.params as { message: string; severity: 'warning' | 'watch' };
+        console.log(`Weather alert: ${params.message}`);
     });
 });
 
