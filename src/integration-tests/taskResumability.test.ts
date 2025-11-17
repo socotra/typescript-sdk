@@ -193,8 +193,14 @@ describe('Transport resumability', () => {
             }
         );
 
-        // Wait for some notifications to arrive (not all) - shorter wait time
-        await new Promise(resolve => setTimeout(resolve, 20));
+        // Fix for node 18 test failures, allow some time for notifications to arrive
+        const maxWaitTime = 2000; // 2 seconds max wait
+        const pollInterval = 10; // Check every 10ms
+        const startTime = Date.now();
+        while (notifications.length === 0 && Date.now() - startTime < maxWaitTime) {
+            // Wait for some notifications to arrive (not all) - shorter wait time
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
 
         // Verify we received some notifications and lastEventId was updated
         expect(notifications.length).toBeGreaterThan(0);
