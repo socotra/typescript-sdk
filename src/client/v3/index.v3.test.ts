@@ -3,7 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { Client, getSupportedElicitationModes } from '../index.js';
 import * as z from 'zod/v3';
-import { AnyObjectSchema } from '../../server/zod-compat.js';
 import {
     RequestSchema,
     NotificationSchema,
@@ -912,14 +911,16 @@ test('should apply defaults for form-mode elicitation when applyDefaults is enab
  * Test that custom request/notification/result schemas can be used with the Client class.
  */
 test('should typecheck', () => {
-    const GetWeatherRequestSchema = RequestSchema.extend({
+    const GetWeatherRequestSchema = z.object({
+        ...RequestSchema.shape,
         method: z.literal('weather/get'),
         params: z.object({
             city: z.string()
         })
     });
 
-    const GetForecastRequestSchema = RequestSchema.extend({
+    const GetForecastRequestSchema = z.object({
+        ...RequestSchema.shape,
         method: z.literal('weather/forecast'),
         params: z.object({
             city: z.string(),
@@ -927,7 +928,8 @@ test('should typecheck', () => {
         })
     });
 
-    const WeatherForecastNotificationSchema = NotificationSchema.extend({
+    const WeatherForecastNotificationSchema = z.object({
+        ...NotificationSchema.shape,
         method: z.literal('weather/alert'),
         params: z.object({
             severity: z.enum(['warning', 'watch']),
@@ -937,7 +939,9 @@ test('should typecheck', () => {
 
     const WeatherRequestSchema = GetWeatherRequestSchema.or(GetForecastRequestSchema);
     const WeatherNotificationSchema = WeatherForecastNotificationSchema;
-    const WeatherResultSchema = ResultSchema.extend({
+    const WeatherResultSchema = z.object({
+        ...ResultSchema.shape,
+        _meta: z.record(z.string(), z.unknown()).optional(),
         temperature: z.number(),
         conditions: z.string()
     });

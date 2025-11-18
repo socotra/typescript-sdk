@@ -1,13 +1,4 @@
-import {
-    AnySchema,
-    AnyObjectSchema,
-    SchemaOutput,
-    getObjectShape,
-    safeParse,
-    isZ4Schema,
-    type ZodV3Internal,
-    type ZodV4Internal
-} from '../server/zod-compat.js';
+import { AnySchema, AnyObjectSchema, SchemaOutput, safeParse } from '../server/zod-compat.js';
 import {
     CancelledNotificationSchema,
     ClientCapabilities,
@@ -36,6 +27,7 @@ import {
 } from '../types.js';
 import { Transport, TransportSendOptions } from './transport.js';
 import { AuthInfo } from '../server/auth/types.js';
+import { getMethodLiteral, parseWithCompat } from '../server/zod-json-schema-compat.js';
 
 /**
  * Callback for progress notifications.
@@ -729,56 +721,4 @@ export function mergeCapabilities<T extends ServerCapabilities | ClientCapabilit
         }
     }
     return result;
-}
-
-// Helper functions for Zod v3/v4 compatibility
-
-function getMethodLiteral(schema: AnyObjectSchema): string {
-    const shape = getObjectShape(schema);
-    const methodSchema = shape?.method as AnySchema | undefined;
-    if (!methodSchema) {
-        throw new Error('Schema is missing a method literal');
-    }
-
-    const value = getLiteralValue(methodSchema);
-    if (typeof value !== 'string') {
-        throw new Error('Schema method literal must be a string');
-    }
-
-    return value;
-}
-
-function getLiteralValue(schema: AnySchema): unknown {
-    if (isZ4Schema(schema)) {
-        const v4Schema = schema as unknown as ZodV4Internal;
-        const v4Def = v4Schema._zod?.def;
-        const candidates = [v4Def?.value, Array.isArray(v4Def?.values) ? v4Def.values[0] : undefined, v4Schema.value];
-
-        for (const candidate of candidates) {
-            if (typeof candidate !== 'undefined') {
-                return candidate;
-            }
-        }
-    } else {
-        const v3Schema = schema as unknown as ZodV3Internal;
-        const legacyDef = v3Schema._def;
-        const candidates = [legacyDef?.value, Array.isArray(legacyDef?.values) ? legacyDef.values[0] : undefined, v3Schema.value];
-
-        for (const candidate of candidates) {
-            if (typeof candidate !== 'undefined') {
-                return candidate;
-            }
-        }
-    }
-
-    return undefined;
-}
-
-function parseWithCompat(schema: AnySchema, data: unknown): unknown {
-    const result = safeParse(schema, data);
-    if (!result.success) {
-        // Type guard: if success is false, error is guaranteed to exist
-        throw result.error;
-    }
-    return result.data;
 }

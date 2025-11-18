@@ -9,7 +9,7 @@ import type * as z4c from 'zod/v4/core';
 
 import * as z4mini from 'zod/v4-mini';
 
-import { AnyObjectSchema, isZ4Schema } from './zod-compat.js';
+import { AnySchema, AnyObjectSchema, getObjectShape, safeParse, isZ4Schema, type ZodV3Internal, type ZodV4Internal } from './zod-compat.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 type JsonSchema = Record<string, unknown>;
@@ -42,4 +42,53 @@ export function toJsonSchemaCompat(schema: AnyObjectSchema, opts?: CommonOpts): 
         strictUnions: opts?.strictUnions ?? true,
         pipeStrategy: opts?.pipeStrategy ?? 'input'
     }) as JsonSchema;
+}
+
+export function getMethodLiteral(schema: AnyObjectSchema): string {
+    const shape = getObjectShape(schema);
+    const methodSchema = shape?.method as AnySchema | undefined;
+    if (!methodSchema) {
+        throw new Error('Schema is missing a method literal');
+    }
+
+    const value = getLiteralValue(methodSchema);
+    if (typeof value !== 'string') {
+        throw new Error('Schema method literal must be a string');
+    }
+
+    return value;
+}
+
+export function getLiteralValue(schema: AnySchema): unknown {
+    if (isZ4Schema(schema)) {
+        const v4Schema = schema as unknown as ZodV4Internal;
+        const v4Def = v4Schema._zod?.def;
+        const candidates = [v4Def?.value, Array.isArray(v4Def?.values) ? v4Def.values[0] : undefined, v4Schema.value];
+
+        for (const candidate of candidates) {
+            if (typeof candidate !== 'undefined') {
+                return candidate;
+            }
+        }
+    } else {
+        const v3Schema = schema as unknown as ZodV3Internal;
+        const legacyDef = v3Schema._def;
+        const candidates = [legacyDef?.value, Array.isArray(legacyDef?.values) ? legacyDef.values[0] : undefined, v3Schema.value];
+
+        for (const candidate of candidates) {
+            if (typeof candidate !== 'undefined') {
+                return candidate;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+export function parseWithCompat(schema: AnySchema, data: unknown): unknown {
+    const result = safeParse(schema, data);
+    if (!result.success) {
+        throw result.error;
+    }
+    return result.data;
 }
