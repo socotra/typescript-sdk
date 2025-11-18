@@ -97,18 +97,17 @@ describe('McpServer', () => {
             },
             async ({ steps }, { sendNotification, _meta }) => {
                 const progressToken = _meta?.progressToken;
-                const stepCount = steps as number;
 
                 if (progressToken) {
                     // Send progress notification for each step
-                    for (let i = 1; i <= stepCount; i++) {
+                    for (let i = 1; i <= steps; i++) {
                         await sendNotification({
                             method: 'notifications/progress',
                             params: {
                                 progressToken,
                                 progress: i,
-                                total: stepCount,
-                                message: `Completed step ${i} of ${stepCount}`
+                                total: steps,
+                                message: `Completed step ${i} of ${steps}`
                             }
                         });
                     }
