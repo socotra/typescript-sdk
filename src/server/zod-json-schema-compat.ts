@@ -10,7 +10,7 @@ import type * as z4c from 'zod/v4/core';
 import * as z4mini from 'zod/v4-mini';
 
 import { AnyObjectSchema, isZ4Schema } from './zod-compat.js';
-import { zodToJsonSchema } from '../_vendor/zod-to-json-schema/index.js';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 type JsonSchema = Record<string, unknown>;
 

@@ -11,6 +11,3 @@ pnpm-lock.yaml
 
 # Ignore generated files
 src/spec.types.ts
-
-# Ignore vendor files
-src/_vendor/
