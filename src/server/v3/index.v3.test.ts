@@ -305,7 +305,7 @@ test('should respect client elicitation capabilities', async () => {
 
     await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
 
-    expect(server.getClientCapabilities()).toEqual({ elicitation: {} });
+    expect(server.getClientCapabilities()).toEqual({ elicitation: { form: {} } });
 
     // This should work because elicitation is supported by the client
     await expect(
