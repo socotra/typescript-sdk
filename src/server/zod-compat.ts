@@ -46,8 +46,6 @@ export type SchemaOutput<S> = S extends z3.ZodTypeAny ? z3.infer<S> : S extends 
 
 export type SchemaInput<S> = S extends z3.ZodTypeAny ? z3.input<S> : S extends z4.$ZodType ? z4.input<S> : never;
 
-export type ObjectOutput<S extends AnyObjectSchema> = SchemaOutput<S>;
-
 /**
  * Infers the output type from a ZodRawShapeCompat (raw shape object).
  * Maps over each key in the shape and infers the output type from each schema.

@@ -9,13 +9,13 @@ import type * as z4c from 'zod/v4/core';
 
 import * as z4mini from 'zod/v4-mini';
 
-import { AnySchema, AnyObjectSchema, getObjectShape, safeParse, isZ4Schema, type ZodV3Internal, type ZodV4Internal } from './zod-compat.js';
+import { AnySchema, AnyObjectSchema, getObjectShape, safeParse, isZ4Schema, getLiteralValue } from './zod-compat.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 type JsonSchema = Record<string, unknown>;
 
 // Options accepted by call sites; we map them appropriately
-export type CommonOpts = {
+type CommonOpts = {
     strictUnions?: boolean;
     pipeStrategy?: 'input' | 'output';
     target?: 'jsonSchema7' | 'draft-7' | 'jsonSchema2019-09' | 'draft-2020-12';
@@ -57,32 +57,6 @@ export function getMethodLiteral(schema: AnyObjectSchema): string {
     }
 
     return value;
-}
-
-export function getLiteralValue(schema: AnySchema): unknown {
-    if (isZ4Schema(schema)) {
-        const v4Schema = schema as unknown as ZodV4Internal;
-        const v4Def = v4Schema._zod?.def;
-        const candidates = [v4Def?.value, Array.isArray(v4Def?.values) ? v4Def.values[0] : undefined, v4Schema.value];
-
-        for (const candidate of candidates) {
-            if (typeof candidate !== 'undefined') {
-                return candidate;
-            }
-        }
-    } else {
-        const v3Schema = schema as unknown as ZodV3Internal;
-        const legacyDef = v3Schema._def;
-        const candidates = [legacyDef?.value, Array.isArray(legacyDef?.values) ? legacyDef.values[0] : undefined, v3Schema.value];
-
-        for (const candidate of candidates) {
-            if (typeof candidate !== 'undefined') {
-                return candidate;
-            }
-        }
-    }
-
-    return undefined;
 }
 
 export function parseWithCompat(schema: AnySchema, data: unknown): unknown {
